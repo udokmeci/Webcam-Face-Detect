@@ -3,22 +3,21 @@ import os
 import sys
 import logging as log
 import datetime as dt
-
-from time import sleep
+import syslog
+import time
 font = cv2.FONT_HERSHEY_SIMPLEX
 cascPath = sys.argv[1]
 threshold= int(sys.argv[2]);
+showImage= int(sys.argv[3]);
 faceCascade = cv2.CascadeClassifier(cascPath)
-log.basicConfig(filename='webcam.log',level=log.INFO)
 
 video_capture = cv2.VideoCapture(0)
-anterior = 0
 
 
 counter = 0;
 while True:
     if not video_capture.isOpened():
-        print('Unable to load camera.')
+        syslog.syslog(syslog.LOG_ERR, 'Unable to load camera.')
         sleep(5)
         pass
 
@@ -45,29 +44,32 @@ while True:
         if y<minLevel :
             minLevel=y
         cv2.putText(frame,'%d - %d' % (minLevel , counter) ,(10,minLevel), font, 1,(255,255,255),2)
-    if minLevel>threshold:
-        counter = counter +1
-    else:
-        if counter>5:
-            os.system('play --no-show-progress --null --channels 1 synth 0.05 sine 400')
+    if len(faces)>0:
+        if minLevel>threshold:
+            counter = counter +1
+        else:
+            if counter>5:
+                syslog.syslog(syslog.LOG_INFO, 'Posture OK')
+                #os.system('play --no-show-progress --null --channels 1 synth 0.05 sine 400')
+            
+            counter =0
+            pass
         
-        counter =0
-        pass
-        
-    if len(faces) > 0 and minLevel>threshold and counter > 50:
-        os.system('play --no-show-progress --null --channels 1 synth 0.1 sine 2000')
-        counter=0
-
-    if anterior != len(faces):
-        anterior = len(faces)
-        log.info("faces: "+str(len(faces))+" at "+str(dt.datetime.now()))
+        if minLevel>threshold and counter > 20:
+            syslog.syslog(syslog.LOG_ALERT, 'Posture Wrong')
+            os.system('play --no-show-progress --null --channels 1 synth 0.1 sine 2000')
+            counter=0
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 
     # Display the resulting frame
-    cv2.imshow('Video', frame)
+    if showImage==1:
+        cv2.imshow('Video', frame)
+
+
+    time.sleep(0.2)
 
 # When everything is done, release the capture
 video_capture.release()
