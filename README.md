@@ -1,4 +1,4 @@
-Webcam-Face-Detect
+Sit Straight by face detection
 ==================
 
 Run the program like this:
